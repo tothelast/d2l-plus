@@ -1,0 +1,77 @@
+service: d2l-plus-auth
+
+frameworkVersion: '3'
+
+provider:
+    name: aws
+    runtime: nodejs18.x
+    region: us-east-1
+    environment:
+        USER_POOL_ID: !Ref CognitoUserPool
+        CLIENT_ID: !Ref CognitoUserPoolClient
+
+functions:
+    auth:
+        handler: src/handlers/auth.handler
+        events:
+            - http:
+                  path: /auth/register
+                  method: post
+                  cors: true
+            - http:
+                  path: /auth/login
+                  method: post
+                  cors: true
+            - http:
+                  path: /auth/verify
+                  method: post
+                  cors: true
+            - http:
+                  path: /auth/forgot-password
+                  method: post
+                  cors: true
+            - http:
+                  path: /auth/reset-password
+                  method: post
+                  cors: true
+
+resources:
+    Resources:
+        CognitoUserPool:
+            Type: AWS::Cognito::UserPool
+            Properties:
+                UserPoolName: d2l-plus-user-pool
+                UsernameAttributes:
+                    - email
+                AutoVerifiedAttributes:
+                    - email
+                Policies:
+                    PasswordPolicy:
+                        MinimumLength: 8
+                        RequireLowercase: true
+                        RequireNumbers: true
+                        RequireSymbols: true
+                        RequireUppercase: true
+                Schema:
+                    - Name: email
+                      AttributeDataType: String
+                      Mutable: true
+                      Required: true
+
+        CognitoUserPoolClient:
+            Type: AWS::Cognito::UserPoolClient
+            Properties:
+                ClientName: d2l-plus-app-client
+                UserPoolId: !Ref CognitoUserPool
+                ExplicitAuthFlows:
+                    - ALLOW_USER_PASSWORD_AUTH
+                    - ALLOW_REFRESH_TOKEN_AUTH
+                GenerateSecret: false
+                PreventUserExistenceErrors: ENABLED
+                AccessTokenValidity: 1
+                IdTokenValidity: 1
+                RefreshTokenValidity: 30
+                ReadAttributes:
+                    - email
+                WriteAttributes:
+                    - email
