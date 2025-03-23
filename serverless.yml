@@ -163,6 +163,15 @@ functions:
                   cors: true
                   private: true
 
+    announcements:
+        handler: .build/src/handlers/announcements/index.handler
+        events:
+            - http:
+                  path: /announcements/course/{courseId}
+                  method: get
+                  cors: true
+                  private: true
+
 resources:
     Resources:
         CognitoUserPool:
