@@ -23,6 +23,12 @@ export const handler: APIGatewayProxyHandler = async (
             }
         } else if (httpMethod === 'POST' && path === '/enrollments') {
             return await enroll(event);
+        } else if (
+            httpMethod === 'DELETE' &&
+            pathParameters?.enrollId &&
+            path.match(/^\/enrollments\/[^\/]+$/)
+        ) {
+            return await dropCourse(event);
         }
 
         return response.error(404, 'Route not found');
@@ -137,5 +143,42 @@ export const enroll = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
     } catch (error) {
         console.error('Error enrolling student:', error);
         return response.error(500, 'Could not enroll student');
+    }
+};
+
+/**
+ * Drop a course enrollment
+ */
+export const dropCourse = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
+    try {
+        const { enrollId } = event.pathParameters || {};
+
+        if (!enrollId) {
+            return response.error(400, 'Missing enrollment ID');
+        }
+
+        // Check if the enrollment exists
+        const enrollment = await dynamodb.get({
+            TableName: ENROLLMENTS_TABLE,
+            Key: { id: enrollId },
+        });
+
+        if (!enrollment) {
+            return response.error(404, 'Enrollment not found');
+        }
+
+        // Delete the enrollment
+        await dynamodb.remove({
+            TableName: ENROLLMENTS_TABLE,
+            Key: { id: enrollId },
+        });
+
+        return response.success({
+            message: 'Enrollment successfully dropped',
+            enrollmentId: enrollId,
+        });
+    } catch (error) {
+        console.error('Error dropping course:', error);
+        return response.error(500, 'Could not drop course');
     }
 };
