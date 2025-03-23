@@ -149,6 +149,15 @@ functions:
                   cors: true
                   private: true
 
+    assignments:
+        handler: .build/src/handlers/assignments/index.handler
+        events:
+            - http:
+                  path: /assignments/deadlines/user/{userId}
+                  method: get
+                  cors: true
+                  private: true
+
 resources:
     Resources:
         CognitoUserPool:
