@@ -21,6 +21,7 @@ provider:
     name: aws
     runtime: nodejs18.x
     region: us-east-1
+    timeout: 15 # Default timeout for all functions
     environment:
         USER_POOL_ID: !Ref CognitoUserPool
         CLIENT_ID: !Ref CognitoUserPoolClient
@@ -75,6 +76,18 @@ provider:
               - !Join ['', [!GetAtt AnnouncementsTable.Arn, '/index/*']]
               - !Join ['', [!GetAtt AssignmentsTable.Arn, '/index/*']]
               - !Join ['', [!GetAtt UsersTable.Arn, '/index/*']]
+        - Effect: Allow
+          Action:
+              - bedrock:ListFoundationModels
+              - bedrock:GetFoundationModel
+              - bedrock:InvokeModel
+          Resource: '*'
+        - Effect: Allow
+          Action:
+              - bedrock-runtime:InvokeModel
+          Resource:
+              - 'arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-text-express-v1'
+              - 'arn:aws:bedrock:us-east-1::foundation-model/*'
 
 functions:
     auth:
@@ -191,6 +204,21 @@ functions:
                   private: true
             - http:
                   path: /rankings/courses
+                  method: get
+                  cors: true
+                  private: true
+
+    assistant:
+        handler: .build/src/handlers/assistant/index.handler
+        timeout: 30
+        events:
+            - http:
+                  path: /assistant/chat
+                  method: post
+                  cors: true
+                  private: true
+            - http:
+                  path: /assistant/models
                   method: get
                   cors: true
                   private: true
