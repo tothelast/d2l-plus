@@ -81,7 +81,17 @@ export const getStudentCourses = async (
         // Filter out any null values (in case a course was deleted)
         const validCourses = courses.filter((course) => course !== null);
 
-        return response.success(validCourses);
+        // Add enrollment ID to each course
+        const coursesWithEnrollmentIds = validCourses.map((course) => {
+            // Find the matching enrollment for this course
+            const enrollment = enrollments.find((e) => e.courseId === course?.id);
+            return {
+                ...course,
+                enrollmentId: enrollment ? enrollment.id : null,
+            };
+        });
+
+        return response.success(coursesWithEnrollmentIds);
     } catch (error) {
         console.error('Error getting student courses:', error);
         return response.error(500, 'Could not get student courses');
