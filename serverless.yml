@@ -172,6 +172,15 @@ functions:
                   cors: true
                   private: true
 
+    grades:
+        handler: .build/src/handlers/grades/index.handler
+        events:
+            - http:
+                  path: /grades/course
+                  method: get
+                  cors: true
+                  private: true
+
 resources:
     Resources:
         CognitoUserPool:
