@@ -50,8 +50,16 @@ export const chat = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxy
         // Generate response using AWS Bedrock
         const result = await bedrock.generateResponse(userPrompt, contextData);
 
+        // Clean the response by removing any residual "User question:" or "Assistant:" prefixes
+        let cleanedResponse = result.response;
+        cleanedResponse = cleanedResponse.replace(/^(User question:|Assistant:|Bot:)\s*/i, '');
+        cleanedResponse = cleanedResponse.replace(
+            /^(The user says:|Respond directly without repeating the user's query:)\s*/i,
+            ''
+        );
+
         return response.success({
-            message: result.response,
+            message: cleanedResponse,
             usage: result.usage,
         });
     } catch (error: unknown) {

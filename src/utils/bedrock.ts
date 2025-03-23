@@ -42,7 +42,8 @@ export const generateResponse = async (
         const systemPrompt = `You are an AI assistant for a university learning management system. You have access to the following data about the student. Use this information to provide accurate and personalized responses to their questions. Only reference information that is present in the provided data. If you don't know something, say so. Don't make up information that isn't in the data. Here is the student's data (in JSON format): ${formattedContext}`;
 
         // Combine the system prompt and user prompt into a single input for Titan
-        const fullPrompt = `${systemPrompt}\n\nUser question: ${prompt}\n\nAssistant:`;
+        // Avoid adding explicit "User question:" and "Assistant:" prefixes to prevent them from showing in responses
+        const fullPrompt = `${systemPrompt}\n\nThe user says: ${prompt}\n\nRespond directly without repeating the user's query:`;
 
         // Prepare payload for Titan model (different format than Claude)
         const payload = {
