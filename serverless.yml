@@ -181,6 +181,20 @@ functions:
                   cors: true
                   private: true
 
+    rankings:
+        handler: .build/src/handlers/rankings/index.handler
+        events:
+            - http:
+                  path: /rankings/professors
+                  method: get
+                  cors: true
+                  private: true
+            - http:
+                  path: /rankings/courses
+                  method: get
+                  cors: true
+                  private: true
+
 resources:
     Resources:
         CognitoUserPool:
