@@ -2,6 +2,21 @@ service: d2l-plus-auth
 
 frameworkVersion: '3'
 
+package:
+    individually: false
+    patterns:
+        - '!node_modules/.bin/**'
+        - '!.git/**'
+        - '!.github/**'
+        - '!.vscode/**'
+        - '!test/**'
+        - '!docs/**'
+        - 'node_modules/**'
+        - '.build/**'
+        - 'src/**'
+        - 'package.json'
+        - 'package-lock.json'
+
 provider:
     name: aws
     runtime: nodejs18.x
@@ -9,10 +24,54 @@ provider:
     environment:
         USER_POOL_ID: !Ref CognitoUserPool
         CLIENT_ID: !Ref CognitoUserPoolClient
+        COURSES_TABLE: ${self:service}-courses
+        PROFESSORS_TABLE: ${self:service}-professors
+        ANNOUNCEMENTS_TABLE: ${self:service}-announcements
+        ASSIGNMENTS_TABLE: ${self:service}-assignments
+        GRADES_TABLE: ${self:service}-grades
+        ENROLLMENTS_TABLE: ${self:service}-enrollments
+        COURSE_RANKINGS_TABLE: ${self:service}-course-rankings
+        PROFESSOR_RANKINGS_TABLE: ${self:service}-professor-rankings
+    apiGateway:
+        apiKeys:
+            - name: d2l-api-key
+              description: API key for accessing d2l-plus APIs
+    iamRoleStatements:
+        - Effect: Allow
+          Action:
+              - cognito-idp:SignUp
+              - cognito-idp:InitiateAuth
+              - cognito-idp:AdminInitiateAuth
+              - cognito-idp:AdminRespondToAuthChallenge
+              - cognito-idp:ConfirmSignUp
+              - cognito-idp:ForgotPassword
+              - cognito-idp:ConfirmForgotPassword
+              - cognito-idp:AdminGetUser
+              - cognito-idp:AdminSetUserPassword
+          Resource: !GetAtt CognitoUserPool.Arn
+        - Effect: Allow
+          Action:
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+              - dynamodb:Scan
+              - dynamodb:Query
+          Resource:
+              - !GetAtt CoursesTable.Arn
+              - !GetAtt ProfessorsTable.Arn
+              - !GetAtt AnnouncementsTable.Arn
+              - !GetAtt AssignmentsTable.Arn
+              - !GetAtt GradesTable.Arn
+              - !GetAtt EnrollmentsTable.Arn
+              - !GetAtt CourseRankingsTable.Arn
+              - !GetAtt ProfessorRankingsTable.Arn
+              - !Join ['', [!GetAtt CoursesTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt ProfessorsTable.Arn, '/index/*']]
 
 functions:
     auth:
-        handler: src/handlers/auth.handler
+        handler: .build/src/handlers/auth.handler
         events:
             - http:
                   path: /auth/register
@@ -35,10 +94,45 @@ functions:
                   method: post
                   cors: true
 
+    courses:
+        handler: .build/src/handlers/courses/index.handler
+        events:
+            - http:
+                  path: /courses
+                  method: post
+                  cors: true
+                  private: true
+            - http:
+                  path: /courses
+                  method: get
+                  cors: true
+                  private: true
+            - http:
+                  path: /courses/{id}
+                  method: get
+                  cors: true
+                  private: true
+            - http:
+                  path: /courses/{id}
+                  method: put
+                  cors: true
+                  private: true
+            - http:
+                  path: /courses/{id}
+                  method: delete
+                  cors: true
+                  private: true
+            - http:
+                  path: /courses/professor/{professorId}
+                  method: get
+                  cors: true
+                  private: true
+
 resources:
     Resources:
         CognitoUserPool:
             Type: AWS::Cognito::UserPool
+            DeletionPolicy: Retain
             Properties:
                 UserPoolName: d2l-plus-user-pool
                 UsernameAttributes:
@@ -65,6 +159,7 @@ resources:
                 UserPoolId: !Ref CognitoUserPool
                 ExplicitAuthFlows:
                     - ALLOW_USER_PASSWORD_AUTH
+                    - ALLOW_USER_SRP_AUTH
                     - ALLOW_REFRESH_TOKEN_AUTH
                 GenerateSecret: false
                 PreventUserExistenceErrors: ENABLED
@@ -75,3 +170,212 @@ resources:
                     - email
                 WriteAttributes:
                     - email
+
+        UsersTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-users
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: email
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: EmailIndex
+                      KeySchema:
+                          - AttributeName: email
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+
+        ProfessorsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-professors
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: email
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: EmailIndex
+                      KeySchema:
+                          - AttributeName: email
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+
+        CoursesTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-courses
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: professorId
+                      AttributeType: S
+                    - AttributeName: semester
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: ProfessorIndex
+                      KeySchema:
+                          - AttributeName: professorId
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+                    - IndexName: SemesterIndex
+                      KeySchema:
+                          - AttributeName: semester
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+
+        AnnouncementsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-announcements
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: courseId
+                      AttributeType: S
+                    - AttributeName: dateTime
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                    - AttributeName: dateTime
+                      KeyType: RANGE
+                GlobalSecondaryIndexes:
+                    - IndexName: CourseIndex
+                      KeySchema:
+                          - AttributeName: courseId
+                            KeyType: HASH
+                          - AttributeName: dateTime
+                            KeyType: RANGE
+                      Projection:
+                          ProjectionType: ALL
+
+        AssignmentsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-assignments
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: courseId
+                      AttributeType: S
+                    - AttributeName: deadline
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: CourseDeadlineIndex
+                      KeySchema:
+                          - AttributeName: courseId
+                            KeyType: HASH
+                          - AttributeName: deadline
+                            KeyType: RANGE
+                      Projection:
+                          ProjectionType: ALL
+
+        GradesTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-grades
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: userId
+                      AttributeType: S
+                    - AttributeName: assignmentId
+                      AttributeType: S
+                    - AttributeName: dateTime
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: UserIndex
+                      KeySchema:
+                          - AttributeName: userId
+                            KeyType: HASH
+                          - AttributeName: dateTime
+                            KeyType: RANGE
+                      Projection:
+                          ProjectionType: ALL
+                    - IndexName: AssignmentIndex
+                      KeySchema:
+                          - AttributeName: assignmentId
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+
+        EnrollmentsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-enrollments
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: id
+                      AttributeType: S
+                    - AttributeName: userId
+                      AttributeType: S
+                    - AttributeName: courseId
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: id
+                      KeyType: HASH
+                GlobalSecondaryIndexes:
+                    - IndexName: UserIndex
+                      KeySchema:
+                          - AttributeName: userId
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+                    - IndexName: CourseIndex
+                      KeySchema:
+                          - AttributeName: courseId
+                            KeyType: HASH
+                      Projection:
+                          ProjectionType: ALL
+
+        CourseRankingsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-course-rankings
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: courseId
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: courseId
+                      KeyType: HASH
+
+        ProfessorRankingsTable:
+            Type: AWS::DynamoDB::Table
+            Properties:
+                TableName: ${self:service}-professor-rankings
+                BillingMode: PAY_PER_REQUEST
+                AttributeDefinitions:
+                    - AttributeName: professorId
+                      AttributeType: S
+                KeySchema:
+                    - AttributeName: professorId
+                      KeyType: HASH
