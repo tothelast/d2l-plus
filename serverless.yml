@@ -32,6 +32,7 @@ provider:
         ENROLLMENTS_TABLE: ${self:service}-enrollments
         COURSE_RANKINGS_TABLE: ${self:service}-course-rankings
         PROFESSOR_RANKINGS_TABLE: ${self:service}-professor-rankings
+        USERS_TABLE: ${self:service}-users
     apiGateway:
         apiKeys:
             - name: d2l-api-key
@@ -66,8 +67,14 @@ provider:
               - !GetAtt EnrollmentsTable.Arn
               - !GetAtt CourseRankingsTable.Arn
               - !GetAtt ProfessorRankingsTable.Arn
+              - !GetAtt UsersTable.Arn
               - !Join ['', [!GetAtt CoursesTable.Arn, '/index/*']]
               - !Join ['', [!GetAtt ProfessorsTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt EnrollmentsTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt GradesTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt AnnouncementsTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt AssignmentsTable.Arn, '/index/*']]
+              - !Join ['', [!GetAtt UsersTable.Arn, '/index/*']]
 
 functions:
     auth:
@@ -124,6 +131,20 @@ functions:
                   private: true
             - http:
                   path: /courses/professor/{professorId}
+                  method: get
+                  cors: true
+                  private: true
+
+    enrollments:
+        handler: .build/src/handlers/enrollments/index.handler
+        events:
+            - http:
+                  path: /enrollments
+                  method: post
+                  cors: true
+                  private: true
+            - http:
+                  path: /enrollments/user/{userId}
                   method: get
                   cors: true
                   private: true
