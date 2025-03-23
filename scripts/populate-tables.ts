@@ -49,6 +49,8 @@ async function createCourses(professors: any[]) {
             lectures: ['Algorithms', 'Data Structures', 'Programming Basics'],
             professorId: professors[0].id,
             semester: 'Fall 2024',
+            weekdays: ['Monday', 'Wednesday'],
+            lectureTime: '10:00-11:30',
         },
         {
             id: uuidv4(),
@@ -56,6 +58,8 @@ async function createCourses(professors: any[]) {
             lectures: ['Calculus', 'Linear Algebra', 'Statistics'],
             professorId: professors[1].id,
             semester: 'Fall 2024',
+            weekdays: ['Tuesday', 'Thursday'],
+            lectureTime: '14:00-15:30',
         },
     ];
 

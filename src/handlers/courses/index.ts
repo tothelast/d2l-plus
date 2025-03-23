@@ -54,7 +54,7 @@ export const handler: APIGatewayProxyHandler = async (
 export const create = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
     try {
         const data = JSON.parse(event.body || '{}');
-        const { title, lectures, professorId, semester } = data;
+        const { title, lectures, professorId, semester, weekdays, lectureTime } = data;
 
         if (!title || !professorId || !semester) {
             return response.error(400, 'Missing required fields');
@@ -66,6 +66,8 @@ export const create = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
             lectures: lectures || [],
             professorId,
             semester,
+            weekdays: weekdays || [],
+            lectureTime: lectureTime || null,
         };
 
         await dynamodb.create({
@@ -126,7 +128,7 @@ export const update = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
             return response.error(400, 'Missing course ID');
         }
 
-        const { title, lectures, semester } = data;
+        const { title, lectures, semester, weekdays, lectureTime } = data;
         const updateExpression = [];
         const expressionAttributeValues: any = {};
         const expressionAttributeNames: any = {};
@@ -147,6 +149,18 @@ export const update = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
             updateExpression.push('#semester = :semester');
             expressionAttributeValues[':semester'] = semester;
             expressionAttributeNames['#semester'] = 'semester';
+        }
+
+        if (weekdays) {
+            updateExpression.push('#weekdays = :weekdays');
+            expressionAttributeValues[':weekdays'] = weekdays;
+            expressionAttributeNames['#weekdays'] = 'weekdays';
+        }
+
+        if (lectureTime !== undefined) {
+            updateExpression.push('#lectureTime = :lectureTime');
+            expressionAttributeValues[':lectureTime'] = lectureTime;
+            expressionAttributeNames['#lectureTime'] = 'lectureTime';
         }
 
         if (updateExpression.length === 0) {

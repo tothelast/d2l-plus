@@ -16,6 +16,8 @@ export interface Course {
     lectures: string[];
     professorId: string;
     semester: string;
+    weekdays?: string[];
+    lectureTime?: string;
 }
 
 export interface Announcement {
